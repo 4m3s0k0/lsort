@@ -1,0 +1,70 @@
+dict = {
+    -------------------------------------
+    'len(n)': [n]       | SORT(N)
+    -------------------------------------
+    '1': [0 ... 9],     | LSORT(dct['1'])
+            0lvl        |
+    '2': [10 ... 99],   | LSORT(dct['2'])
+            0lvl        |
+            9lvl        |
+    '3': [100 ... 999]  | LSORT(dct['3'])
+            0lvl        |
+            n...        |
+            99lvl       |
+    ------------------------------------
+}
+
+position = {
+		'1': {
+            # (1, 6) -> [0, 1, 2, 4, 7, 3]
+			'0l': (1, 6),
+		}
+	}
+
+
+--------------------------------- LSORT ---------------------------------
+1, 8, 2, 3, 10, 4, 7, 5, 6, 22, 13  |  0level: len(n) == 1
+----------------------------------  |  -------------------
+1level-------0...................3  |  1level: len(n) == 2 and startswith 1: 10, 11 ...
+2level-----------------------2----  |  2level: len(n) == 2 and startswith 2: 20, 21 ...
+
+
+----------------------------------
+1, 2, 3, 4, 5, 6, 7, 8
+
+        1level: (0 <=> 3): 10, 13
+----------------------------------
+1, 2, 3, 4, 5, 6, 7, 8, 10, 13
+
+        2level: (2): 22
+----------------------------------
+1, 2, 3, 4, 5, 6, 7, 8, 10, 13, 22
+
+
+----------------------------------
+append(n) -> dict[len(n)] -> lst[n] -> LSORT:GET_LEVEL -> SORT ONLY LEVEL
+exp: 45
+append(45) > dict['2'] > '2': [10 ... 99] > LSORT:LEVEL=4 == [40 ... 49]
+
+# FULL_LIST -> dict['1'] + dict['2']
+# LEVEL:(45, 89)
+
+
+ALL LEVELS HAVE NUMBERS 0 ... 9
+WE CAN MAKE LINK TO EXIST LEVEL WITH NUMBERS 0 ... 9
+
+EXP, if we have sorted list from 0 to 20:
+levels = {
+    '1': {
+        '0': [False, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]  # 0 + 0 = 0, [True, 'S']
+        '1': [True, '0']    # linked to levels with len 1 | dict with len 1
+        '2': [True, '0']    # how to fill 1level:
+    }                       # m = levels[len(n)][str(n)[:-1]][0]
+}
+                            if m:
+                                s = levels[len(n)][str(n)[:-1]] # '10' -> '1'
+                                # '1' + '0' == 10
+                                # [False, 10 ... 19]
+                                levels[len(n)][str(n)[-1]] = [False] + [
+                                    int(len(n) + str(i)) for i in levels[s][1:]
+                                ]
