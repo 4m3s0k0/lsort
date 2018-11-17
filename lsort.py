@@ -3,149 +3,81 @@
 
 # __author__ = 'kira@-築城院 真鍳'
 
-from collections import defaultdict
+import numpy as np
+from functools import partial
+from collections import defaultdict, deque
+
+"""
+https://stackoverflow.com/questions/25014298/creating-a-defaultdict-with-empty-numpy-array/25014320
+"""
 
 
 class LevelSort:
-    """
-    Container like, ten (10) with nteen:
-        add 10 (n==10) to key '2:1' with logic if len(n)==2 and n.startswith('1')
-
-    >>> ls = LevelSort()
-    >>> t1 = [1, 5, 9]
-    >>> ls._add(t1)
-    >>> ls._llevels
-    defaultdict(list, {'1:0': [1, 5, 9]})
-    >>> ls._get()
-    [1, 5, 9]
-    >>>
-    >>> t2 = [16, 17, 11, 25, 20, 29, 78, 89]
-    >>> ls._add(t2)
-    >>> ls._llevels
-    defaultdict(<class 'list'>, {
-        '1:0': [1, 5, 9],
-        '2:1': [6, 7, 1],
-        '2:2': [5, 0, 9],
-        '2:7': [8],
-        '2:8': [9]
-        }
-    )
-    >>>
-    >>> ls._get()
-    [1, 5, 9, 16, 17, 11, 25, 20, 29, 78, 89]
-    >>> ls._new()
-    >>> ls._llevels
-    defaultdict(<class 'list'>, {})
-    """
 
     def __init__(self):
-        self._link = list(range(10))
-        self._llevels = defaultdict(list)
+        self._link = np.array(range(10))
+        self._data = defaultdict(partial(np.array, False))
+        self._linked = deque() # FIFO
 
-    def __len__(self):
-        """
-        Return length of keys in *_llevels*
-        """
-        return len(self._llevels.keys())
+    def _gen_key(self, item):
+        return f"{len(item)}:{0 if len(item) == 1 else item[:-1]}"
 
-    def __repr__(self):
-        """
-        Print in instance call
-        """
-        return 'ins of <class LevelSort>'
+    def _gen_value(self, item):
+        return np.array(item, dtype=np.int64) if len(item) == 1 else np.array(item[-1], dtype=np.int64)
 
-    def __linked_levels(self):
-        """
-        All levels have numbers f0 ... t9
-        I will remove repeating numbers with adding 'T'
-        'T' -> True,  i already have numbers in *self._link*
-        Exp: [0, 9, 8, 5, 2, 3, 7, 6, 1, 4] > ['T']
-        """
-        for key in self._llevels:
-            item = self._llevels[key]
-            if 10 == len(item):
-                if not set(self._link) ^ set(item):
-                    self._llevels[key] = ['T']
+    def _load(self):
+        for _ in range(len(self._linked)):
+            self._data[self._linked.pop()] = self._link
 
-    def __ftem(self, item):
-        """
-        Return Key for *_llevels*
-        """
-        return "{}:{}".format(
-            len(item), '0' if len(item) == 1 else item[:-1]
-        )
+    def dump(self):
+        for key in self._data.keys():
+            item = self._data[key]
+            if len(item) == 10 and not set(self._link) ^ set(item):
+                self._data[key] = np.array(['a'])
+                self._linked.append(key)
 
-    def __levels(self, _input):
-        """
-        _llevels['2:1'] > 2: len(item in _input), 1: 1st level < [15][:-1]
-        """
-        for item in _input:
+    def add(self, iterable):
+        if isinstance(iterable, (str, bool, float)):
+            assert isinstance(iterable, int), 'Need integer, or list of integers'
+
+        if isinstance(iterable, int):
+            iterable = [iterable]
+
+        for item in iterable:
             item = str(item)
-            self._llevels[self.__ftem(item)].append(
-                int(item) if len(item) == 1 else int(item[-1])
-            )
-        self.__linked_levels()
-
-    def _add(self, _input):
-        """
-        :arg:   _input: integer or list of integers
-        ---------------------------------
-        1st _add: creates linked list
-        2nd _add: appends to the linked list
-        """
-        # LS SORTING ONLY INTEGERS
-        if isinstance(_input, (str, bool, float)):
-            assert isinstance(_input, int), 'Need integer, or list of integers'
-        # INT TO LIST
-        if isinstance(_input, int):
-            _input = [_input]
-        # 1st AND 2nd CALL
-        if not self._llevels:
-            # CREATE LINKED LIST
-            self.__levels(_input)
-        else:
-            # APPEND TO LINKED LIST
-            for item in _input:
-                item = str(item)
-                ftem = self.__ftem(item)
-                if ftem in self._llevels.keys():
-                    if self._llevels[ftem][0] == 'T':
-                        self._llevels[ftem] = self._link
-                        self._llevels[ftem].append(
-                            int(item) if len(item) == 1 else int(item[-1])
-                        )
-                    else:
-                        self._llevels[ftem].append(int(item[-1]))
-                else:
-                    self._llevels[ftem] = [int(item[-1])]
-            self.__linked_levels()
-
-    def _get(self):
-        """
-        Return list of numbers
-        """
-        glvl = []
-        skey = list(self._llevels.keys())
-        skey.sort()
-        for gkey in skey:
-            lkey = gkey.split(':')[1]   # len(n):level(n)
-            if self._llevels[gkey][0] == 'T':
-                glvl.extend(
-                    [int('{}{}'.format(lkey, each)) for each in self._link]
+            ftem = self._gen_key(item)
+            if self._data[ftem].dtype != np.bool:
+                self._data[ftem] = np.append(
+                    self._link if self._data[ftem].dtype != np.int64 else self._data[ftem],
+                    self._gen_value(item)
                 )
             else:
-                glvl.extend(
-                    [int('{}{}'.format(lkey, each)) for each in self._llevels[gkey]]
-                )
-        return glvl
+                self._data[ftem] = self._gen_value(item)
 
-    def _new(self):
-        """
-        Clear *_llevels*
-        """
-        self._llevels.clear()
+    def get(self):
+
+        # it shouldn't change data
+        if self._linked:
+            self._load()
+
+        return (values for key in sorted(self._data.keys())
+                       for values in self._data[key]
+                                    + (int(f"{key.split(':')[1]}0")))
+
+    def clear(self):
+        self._data.clear()
 
 
 if __name__ == "__main__":
     ls = LevelSort()
-    print(ls.__doc__)
+    t1 = [1, 5, 9]
+    print('adding:', t1)
+    ls.add(t1)
+    print('data:', ls._data)
+    t2 = range(10, 45)
+    print('adding:', t2)
+    ls.add(t2)
+    print('data:', ls._data)
+    print('dumping...')
+    ls.dump()
+    print('data:', ls._data)
