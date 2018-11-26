@@ -17,6 +17,7 @@ class LevelSort:
     def __init__(self):
         self._link = np.array(range(10))
         self._data = defaultdict(partial(np.array, False))
+        self._cops = None
         self._linked = deque() # FIFO
 
     def _gen_key(self, item):
@@ -25,9 +26,17 @@ class LevelSort:
     def _gen_value(self, item):
         return np.array(item, dtype=np.int64) if len(item) == 1 else np.array(item[-1], dtype=np.int64)
 
-    def _load(self):
-        for _ in range(len(self._linked)):
-            self._data[self._linked.pop()] = self._link
+    def load(self):
+        if self._linked:
+            for _ in range(len(self._linked)):
+                self._data[self._linked.pop()] = self._link
+
+    def _load_copy(self, key):
+        if self._cops and key in self._cops:
+            del self._cops[self._cops.index(key)]
+            return self._link
+        else:
+            return self._data[key]
 
     def dump(self):
         for key in self._data.keys():
@@ -55,29 +64,11 @@ class LevelSort:
                 self._data[ftem] = self._gen_value(item)
 
     def get(self):
-
-        # it shouldn't change data
-        if self._linked:
-            self._load()
-
+        self._cops = self._linked.copy()
         return (values for key in sorted(self._data.keys())
-                       for values in self._data[key]
+                       for values in self._load_copy(key)
                                     + (int(f"{key.split(':')[1]}0")))
 
     def clear(self):
         self._data.clear()
-
-
-if __name__ == "__main__":
-    ls = LevelSort()
-    t1 = [1, 5, 9]
-    print('adding:', t1)
-    ls.add(t1)
-    print('data:', ls._data)
-    t2 = range(10, 45)
-    print('adding:', t2)
-    ls.add(t2)
-    print('data:', ls._data)
-    print('dumping...')
-    ls.dump()
-    print('data:', ls._data)
+        self._linked.clear()
